@@ -1,0 +1,13 @@
+{
+  "name": "sixpack-60-hari",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jadwal 60 hari menuju sixpack: menu warteg, gym, checklist, berat badan.",
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0"
+  }
+}

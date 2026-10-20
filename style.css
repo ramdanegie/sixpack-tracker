@@ -129,6 +129,7 @@ h1, h2, h3, p { margin: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { -webkit-touch-callout: none; }
 :focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+[hidden] { display: none !important; }
 .sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* Latar ambient berwarna supaya kaca terlihat */
@@ -228,7 +229,11 @@ body::before {
   color: var(--label-2);
   white-space: nowrap;
 }
+.sync { appearance: none; border: 0; font-family: inherit; cursor: pointer; }
 .sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.sync[data-s="server"] i { background: var(--blue); }
+.sync[data-s="locked"] i, .sync[data-s="offline"] i { background: var(--orange); }
+.sync[data-s="locked"] { color: var(--orange-ink); background: var(--orange-tint); }
 .sync[data-s="cloud"] i { background: var(--blue); }
 .sync[data-s="saving"] i { background: var(--orange); }
 .sync[data-s="memory"] i { background: var(--red); }
@@ -746,6 +751,22 @@ details.disclosure > div { display: flex; flex-direction: column; gap: 10px; pad
 .tab:active { transform: scale(.94); }
 .tab[aria-current="page"] { color: var(--blue); background: var(--fill); }
 .tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+/* ---------- Lembar PIN ---------- */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  background: rgba(0, 0, 0, .28);
+}
+.sheet { width: min(100%, 440px); padding: 22px 20px 18px; display: flex; flex-direction: column; gap: 12px; background: var(--glass-solid); animation: sheet-up .35s cubic-bezier(.2, .9, .25, 1) both; }
+.pin-input { height: 54px; text-align: center; font-size: 26px; letter-spacing: .3em; font-family: var(--font-round); }
+@keyframes sheet-up { from { transform: translateY(24px); } to { transform: none; } }
+@media (min-width: 640px) { .sheet-backdrop { align-items: center; } }
 
 /* ---------- Toast ---------- */
 .toast {

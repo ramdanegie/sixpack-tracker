@@ -98,11 +98,26 @@ function saveUI() { writeJSON(UI_KEY, { tab: ui.tab, foodGrade: ui.foodGrade });
 function commit() {
   state.updatedAt = Date.now();
   const ok = writeJSON(KEY, state);
-  if (cloud.ref) { setSync('saving'); scheduleCloud(); } else setSync(ok ? 'local' : 'memory');
+  if (cloud.kind === 'claude' || cloud.kind === 'server') { setSync('saving'); scheduleCloud(); }
+  else setSync(cloud.kind === 'locked' ? 'locked' : ok ? 'local' : 'memory');
 }
 
-/* Sinkron ke akun Claude (hanya aktif kalau dibuka sebagai Artifact). */
-const cloud = { ref: null, timer: null, busy: false, dirty: false, retried: false };
+/* ---------- Sinkron ----------
+   Dua jalur, dicoba berurutan:
+   1. Artifact di Claude → penyimpanan akun Claude (`db`).
+   2. Deploy Vercel → /api/state (Turso/SQLite), dibuka dengan PIN.
+   Kalau tidak ada keduanya (GitHub Pages / buka file), hanya localStorage. */
+const PIN_KEY = 'sixpack60:pin';
+const cloud = { kind: null, ref: null, timer: null, busy: false, dirty: false, retried: false, note: '' };
+let pin = readJSON(PIN_KEY) || '';
+
+function adoptRemote(remote, msg) {
+  state = remote;
+  writeJSON(KEY, state);
+  ui.day = clamp(todayN(), 1, TOTAL);
+  render();
+  if (msg) toast(msg);
+}
 
 function parseRemote(d) {
   try { return d && typeof d.json === 'string' ? normalize(JSON.parse(d.json)) : null; } catch { return null; }
@@ -110,7 +125,12 @@ function parseRemote(d) {
 
 async function initCloud() {
   const c = window.claude;
-  if (!c || typeof c.use !== 'function') return;
+  if (c && typeof c.use === 'function') return initClaude(c);
+  const r = await syncServer();
+  if (r === 'locked') openPin();
+}
+
+async function initClaude(c) {
   try {
     const [db, user] = await Promise.all([c.use('db'), c.use('user')]);
     if (!db || !user) return;
@@ -120,66 +140,150 @@ async function initCloud() {
     const snap = await ref.get();
     const remote = snap.exists ? parseRemote(snap.data()) : null;
     cloud.ref = ref;
-    if (remote && remote.updatedAt > state.updatedAt) {
-      state = remote;
-      writeJSON(KEY, state);
-      ui.day = clamp(todayN(), 1, TOTAL);
-      render();
-      setSync('cloud');
-    } else if (state.updatedAt > (remote ? remote.updatedAt : 0)) {
-      await flushCloud();
-    } else {
-      setSync('cloud');
-    }
+    cloud.kind = 'claude';
+    if (remote && remote.updatedAt > state.updatedAt) adoptRemote(remote);
+    else if (state.updatedAt > (remote ? remote.updatedAt : 0)) await flushCloud();
+    setSync('cloud');
     ref.onSnapshot(s => {
       if (!s.exists || s.metadata.hasPendingWrites) return;
       const r = parseRemote(s.data());
-      if (r && r.updatedAt > state.updatedAt) {
-        state = r;
-        writeJSON(KEY, state);
-        render();
-        toast('Data diperbarui dari perangkat lain');
-      }
+      if (r && r.updatedAt > state.updatedAt) adoptRemote(r, 'Data diperbarui dari perangkat lain');
     }, () => {});
   } catch {
     cloud.ref = null;
+    cloud.kind = null;
   }
 }
 
+async function serverFetch(method, body) {
+  const res = await fetch('api/state', {
+    method,
+    cache: 'no-store',
+    headers: { 'Content-Type': 'application/json', 'x-pin': encodeURIComponent(pin) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await res.json(); } catch { /* bukan server aplikasi ini */ }
+  return { status: res.status, data };
+}
+
+// Ambil data server lalu samakan dengan data lokal (yang lebih baru menang).
+// Hasil: 'ok' | 'locked' | 'limited' | 'unconfigured' | 'offline' | 'none'
+async function syncServer() {
+  let r;
+  try { r = await serverFetch('GET'); } catch {
+    if (cloud.kind === 'server') setSync('offline');
+    return cloud.kind ? 'offline' : 'none';
+  }
+  if (!r.data || r.status === 404 || r.status === 405) return 'none';
+  if (r.status === 401 || r.status === 429) {
+    cloud.kind = 'locked';
+    setSync('locked');
+    return r.status === 429 ? 'limited' : 'locked';
+  }
+  if (r.status !== 200) {
+    cloud.note = (r.data && r.data.message) || 'Server database bermasalah.';
+    if (cloud.kind === 'server') setSync('offline');
+    return r.status === 503 ? 'unconfigured' : 'offline';
+  }
+  cloud.kind = 'server';
+  cloud.note = '';
+  const remote = r.data.state ? normalize(r.data.state) : null;
+  if (remote && remote.updatedAt > state.updatedAt) adoptRemote(remote);
+  else if (state.updatedAt > (remote ? remote.updatedAt : 0)) await flushCloud();
+  setSync('server');
+  return 'ok';
+}
+
 function scheduleCloud() {
-  if (!cloud.ref) return;
   clearTimeout(cloud.timer);
   cloud.timer = setTimeout(flushCloud, 1200);
 }
 
 async function flushCloud() {
-  if (!cloud.ref) return;
+  if (cloud.kind !== 'claude' && cloud.kind !== 'server') return;
   if (cloud.busy) { cloud.dirty = true; return; }
   cloud.busy = true;
   setSync('saving');
   try {
-    await cloud.ref.set({ json: JSON.stringify(state), updatedAt: state.updatedAt });
+    if (cloud.kind === 'claude') {
+      await cloud.ref.set({ json: JSON.stringify(state), updatedAt: state.updatedAt });
+      setSync('cloud');
+    } else {
+      const r = await serverFetch('PUT', { state });
+      if (r.status === 200) setSync('server');
+      else if (r.status === 409 && r.data && r.data.state) { adoptRemote(normalize(r.data.state), 'Data diperbarui dari perangkat lain'); setSync('server'); }
+      else if (r.status === 401) { cloud.kind = 'locked'; setSync('locked'); openPin(); }
+      else { cloud.note = (r.data && r.data.message) || ''; setSync('offline'); }
+    }
     cloud.retried = false;
-    setSync('cloud');
   } catch (e) {
-    if (e && e.code === 'unavailable' && !cloud.retried) {
+    if (cloud.kind === 'server') {
+      setSync('offline');
+    } else if (e && e.code === 'unavailable' && !cloud.retried) {
       cloud.retried = true;
       setTimeout(flushCloud, 1500 + Math.random() * 2000);
+      setSync('local');
     } else {
       cloud.ref = null;
+      cloud.kind = null;
+      setSync('local');
     }
-    setSync('local');
   } finally {
     cloud.busy = false;
   }
   if (cloud.dirty) { cloud.dirty = false; flushCloud(); }
 }
 
+/* Layar PIN */
+function openPin() {
+  const sheet = $('#pinSheet');
+  if (!sheet) return;
+  sheet.hidden = false;
+  $('#pinErr').textContent = '';
+  setTimeout(() => $('#pinInput').focus(), 50);
+}
+function closePin() { $('#pinSheet').hidden = true; $('#pinInput').value = ''; }
+
+async function submitPin() {
+  const value = $('#pinInput').value.trim();
+  const err = $('#pinErr');
+  if (value.length < 6) { err.textContent = 'PIN minimal 6 karakter.'; return; }
+  pin = value;
+  err.textContent = '';
+  $('#pinSubmit').disabled = true;
+  const r = await syncServer();
+  $('#pinSubmit').disabled = false;
+  if (r === 'ok') {
+    writeJSON(PIN_KEY, pin);
+    closePin();
+    toast('Tersambung ke database');
+    if (ui.tab === 'profil') render();
+    return;
+  }
+  pin = '';
+  err.textContent = {
+    locked: 'PIN salah.',
+    limited: 'Terlalu banyak PIN salah. Coba lagi 15 menit lagi.',
+    unconfigured: cloud.note,
+  }[r] || 'Server tidak bisa dihubungi. Cek koneksi internet.';
+}
+
+function forgetPin() {
+  pin = '';
+  try { localStorage.removeItem(PIN_KEY); } catch { /* abaikan */ }
+  cloud.kind = 'locked';
+  setSync('locked');
+}
+
 let syncState = localOK ? 'local' : 'memory';
 const SYNC_TEXT = {
   local: ['Tersimpan', 'Tersimpan otomatis di browser ini'],
   cloud: ['Tersinkron', 'Tersinkron ke akun Claude kamu'],
+  server: ['Tersinkron', 'Tersimpan di database Turso (SQLite), cadangan di HP ini'],
   saving: ['Menyimpan…', 'Sedang menyimpan…'],
+  locked: ['Butuh PIN', 'Masukkan PIN untuk menyambung ke database. Data tetap tersimpan di HP ini.'],
+  offline: ['Offline', 'Tersimpan di HP ini, dikirim ke database saat online lagi'],
   memory: ['Tidak tersimpan', 'Browser memblokir penyimpanan. Pakai backup.'],
 };
 function setSync(s) {
@@ -187,7 +291,7 @@ function setSync(s) {
   const chip = $('#sync');
   if (chip) { chip.dataset.s = s; chip.lastElementChild.textContent = SYNC_TEXT[s][0]; }
   const row = $('#syncText');
-  if (row) row.textContent = SYNC_TEXT[s][1];
+  if (row) row.textContent = SYNC_TEXT[s][1] + (cloud.note && (s === 'offline' || s === 'local') ? ` (${cloud.note})` : '');
 }
 
 /* ---------- Rencana per hari ---------- */
@@ -851,6 +955,7 @@ function viewProfil() {
   const p = state.profile || {};
   const m = metrics();
   const inArtifact = !!(window.claude && typeof window.claude.use === 'function');
+  const onServer = cloud.kind === 'server' || cloud.kind === 'locked';
   const standalone = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
 
   const form = `
@@ -903,6 +1008,9 @@ function viewProfil() {
       <div class="list glass">
         <div class="row"><span class="row-text"><span class="row-title">Status</span><span class="row-sub" id="syncText">${SYNC_TEXT[syncState][1]}</span></span></div>
       </div>
+      ${onServer ? `<div class="btn-row">${cloud.kind === 'locked'
+        ? '<button class="btn" type="button" data-act="openPin">Masukkan PIN</button>'
+        : '<button class="btn tinted" type="button" data-act="syncNow">Sinkron sekarang</button><button class="btn plain" type="button" data-act="forgetPin">Lupakan PIN di HP ini</button>'}</div>` : ''}
       <div class="btn-row">
         <button class="btn tinted" type="button" data-act="export">Unduh backup</button>
         <button class="btn tinted" type="button" data-act="copy">Salin data</button>
@@ -918,7 +1026,7 @@ function viewProfil() {
           </div>
         </details>
       </div>
-      <p class="footnote">${inArtifact ? 'Di Claude, data ikut tersinkron ke akunmu jadi bisa dibuka dari HP dan laptop.' : 'Data tersimpan di browser HP ini. Unduh backup sesekali, terutama sebelum ganti HP atau hapus data browser.'}</p>
+      <p class="footnote">${inArtifact ? 'Di Claude, data ikut tersinkron ke akunmu jadi bisa dibuka dari HP dan laptop.' : onServer ? 'Data tersimpan di database Turso (SQLite) dan bisa dibuka dari HP atau laptop lain dengan PIN yang sama. Backup tetap disarankan sesekali.' : 'Data tersimpan di browser HP ini. Unduh backup sesekali, terutama sebelum ganti HP atau hapus data browser.'}</p>
       ${!inArtifact && !standalone ? '<p class="footnote"><b>Pasang seperti aplikasi:</b> di iPhone buka di Safari → Bagikan → Tambah ke Layar Utama. Di Android: menu Chrome → Tambahkan ke layar utama.</p>' : ''}
     </section>`;
 
@@ -955,6 +1063,7 @@ function render(animate = false) {
   $('#navTitle').textContent = title;
   $$('#tabbar [data-tab]').forEach(b => b.setAttribute('aria-current', b.dataset.tab === ui.tab ? 'page' : 'false'));
   if (ui.tab === 'progres') drawChart();
+  setSync(syncState);
 }
 
 function refreshDay() {
@@ -1145,6 +1254,11 @@ document.addEventListener('click', e => {
       state.weights = state.weights.filter(w => w.date !== act.dataset.date);
       commit(); render(); toast('Data berat dihapus');
       break;
+    case 'syncChip': if (cloud.kind === 'locked') openPin(); else goTab('profil'); break;
+    case 'openPin': openPin(); break;
+    case 'pinLater': closePin(); break;
+    case 'syncNow': syncServer().then(r => toast(r === 'ok' ? 'Sudah sinkron dengan database' : 'Belum bisa sinkron, coba lagi nanti')); break;
+    case 'forgetPin': forgetPin(); render(); toast('PIN dihapus dari HP ini'); break;
     case 'export': exportBackup(); break;
     case 'copy': copyData(); break;
     case 'importText': importJSON($('#importText').value); break;
@@ -1187,6 +1301,7 @@ document.addEventListener('submit', e => {
   if (!form) return;
   e.preventDefault();
   switch (form.dataset.form) {
+    case 'pin': submitPin(); break;
     case 'profile': saveProfile(form); break;
     case 'quickWeight': {
       const err = saveWeight(iso(dateOf(ui.day)), $('#qkg').value, '');
@@ -1229,6 +1344,7 @@ window.addEventListener('resize', debounce(() => { if (ui.tab === 'progres') dra
 let lastToday = todayN();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
+  if (cloud.kind === 'server') syncServer();
   const t = todayN();
   if (t !== lastToday) {
     if (ui.day === clamp(lastToday, 1, TOTAL)) ui.day = clamp(t, 1, TOTAL);
@@ -1236,6 +1352,8 @@ document.addEventListener('visibilitychange', () => {
     render();
   }
 });
+
+window.addEventListener('online', () => { if (cloud.kind === 'server') syncServer(); });
 
 /* ---------- Mulai ---------- */
 $('#tabbar').innerHTML = Object.entries(VIEWS).map(([id, [label]]) => `<button class="tab" type="button" data-tab="${id}">${ICON[id]}<span>${label}</span></button>`).join('');

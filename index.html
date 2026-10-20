@@ -23,12 +23,22 @@
 <header class="navbar" id="navbar">
   <div class="navbar-inner">
     <span class="nav-title" id="navTitle">Hari Ini</span>
-    <span class="sync" id="sync" data-s="local" role="status"><i></i><span>Tersimpan</span></span>
+    <button class="sync" id="sync" type="button" data-s="local" data-act="syncChip" aria-label="Status penyimpanan"><i></i><span>Tersimpan</span></button>
   </div>
 </header>
 <main class="view" id="view"></main>
 <nav class="tabbar" id="tabbar" aria-label="Menu utama"></nav>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="sheet-backdrop" id="pinSheet" hidden>
+  <form class="sheet glass" data-form="pin" role="dialog" aria-modal="true" aria-labelledby="pinTitle" novalidate>
+    <h2 class="section-title" id="pinTitle">Masukkan PIN</h2>
+    <p class="tip">Data kamu tersimpan di database. Masukkan PIN yang diatur di Vercel (APP_PIN). Cukup sekali per HP.</p>
+    <input class="field-input pin-input" id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" placeholder="••••••" aria-label="PIN">
+    <p class="error" id="pinErr"></p>
+    <button class="btn block" id="pinSubmit" type="submit">Buka</button>
+    <button class="btn plain block" type="button" data-act="pinLater">Nanti saja, simpan di HP dulu</button>
+  </form>
+</div>
 <!-- app:end -->
 <script src="data.js"></script>
 <script src="app.js"></script>
