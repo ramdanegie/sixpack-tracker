@@ -12,7 +12,9 @@ Prototipe aplikasi jadwal 60 hari menuju sixpack, mobile-first dengan tampilan k
   | 2× makan · Sedang | Ayam/ikan + tempe/tahu dari warteg | ±6 telur, ±Rp54.500/hari |
 
   Pilih di tab **Warteg → Pola makan**. Kalau telur lebih dari 6 butir sehari, aplikasi mengingatkan untuk cek kolesterol.
-- **Program gym 3 fase**: Fondasi (hari 1–21), Bakar Lemak (22–42), Definisi (43–60). Split Upper/Lower + sirkuit perut + kardio, 6 hari latihan dan 1 hari istirahat aktif.
+- **Program gym 3 fase**: Fondasi (hari 1–21), Bakar Lemak (22–42), Definisi (43–60). Beban, repetisi, dan kardio naik tiap fase. Pilih program di tab **Jadwal**:
+  - **Push/Pull/Push · 3–4×** (bawaan): Push Bahu, Pull Punggung, Push Dada, masing-masing + 1 latihan kaki. Leg day di hari ke-4 opsional; kalau dilewati, ganti jalan 45 menit dan tetap dihitung tercapai. Hari lain kardio & perut.
+  - **Upper/Lower · 6×**: 4 hari beban, 1 hari kardio, 1 sirkuit full body.
 - **Checklist harian**: makan, protein, bebas gorengan, latihan, perut, langkah, air, tidur. Hari dianggap *tercapai* kalau ≥ 80% dicentang. Progres tampil sebagai cincin Makan / Gerak / Pulih.
 - **Jadwal 60 hari**: kalender per fase dengan status tiap hari (tercapai, sebagian, tidak tercapai), streak, dan rata-rata.
 - **Berat & tinggi badan**: hitung BMI (kategori Kemenkes), kebutuhan kalori (Mifflin-St Jeor, defisit ±20%), protein 1,6 g/kg, air, perkiraan lemak tubuh, target realistis 60 hari, dan grafik berat.

@@ -51,7 +51,7 @@ const ICON = {
 
 /* ---------- State & penyimpanan ---------- */
 function defaultState() {
-  return { v: 1, start: iso(new Date()), restDay: 0, pattern: 'warteg3', profile: null, checks: {}, notes: {}, weights: [], updatedAt: 0 };
+  return { v: 1, start: iso(new Date()), restDay: 0, pattern: 'warteg3', program: PROGRAMS[0].id, profile: null, checks: {}, notes: {}, weights: [], updatedAt: 0 };
 }
 
 function normalize(s) {
@@ -64,6 +64,7 @@ function normalize(s) {
     start: isISO(s.start) ? s.start : d.start,
     restDay: Number.isInteger(s.restDay) && s.restDay >= 0 && s.restDay <= 6 ? s.restDay : 0,
     pattern: PATTERNS.some(pt => pt.id === s.pattern) ? s.pattern : 'warteg3',
+    program: PROGRAMS.some(pg => pg.id === s.program) ? s.program : PROGRAMS[0].id,
     profile: profileOk ? {
       nama: String(p.nama || '').slice(0, 40),
       sex: p.sex === 'P' ? 'P' : 'L',
@@ -199,10 +200,11 @@ function planFor(n) {
   const date = dateOf(n);
   const phase = phaseOf(n);
   const idx = (date.getDay() - state.restDay + 6) % 7; // 0 = sehari setelah hari libur
-  const key = WEEK_ORDER[idx];
+  const key = programOf().week[idx];
   return { n, date, phase, pi: phase.id - 1, idx, key, session: SESSIONS[key], rest: key === 'rest' };
 }
 
+function programOf(id = state.program) { return PROGRAMS.find(pg => pg.id === id) || PROGRAMS[0]; }
 function patternOf(id = state.pattern) { return PATTERNS.find(pt => pt.id === id) || PATTERNS[0]; }
 
 function itemsFor(plan) {
@@ -367,7 +369,9 @@ function checkText(id, plan, m, dm) {
     case 'bersih': return ['Bebas gorengan & minuman manis', 'Tanpa gorengan tepung, kerupuk, es teh manis'];
     case 'latihan': return plan.rest
       ? ['Jalan santai + stretching', CARDIO.walk[pi]]
-      : [`Latihan ${session.name}`, session.focus + (session.cardio ? ' + kardio' : '')];
+      : session.optional
+        ? ['Leg day atau jalan 45 menit', 'Opsional, salah satu saja sudah dihitung']
+        : [`Latihan ${session.name}`, session.focus + (session.cardio ? ' + kardio' : '')];
     case 'abs': return ['Sirkuit perut', ABS[pi].rounds];
     case 'langkah': return [`Jalan ${fmt(phase.steps)} langkah`, 'Cek di aplikasi kesehatan HP'];
     case 'air': return [`Minum air ${m ? fmt(m.water, 1) : '2,5–3'} liter`, `± ${m ? Math.round(m.water / 0.25) : 11} gelas belimbing`];
@@ -513,7 +517,7 @@ function viewToday() {
 
   const workoutSection = `
     <section class="section">
-      <div class="section-head"><h2 class="section-title">Latihan</h2><span class="section-meta">${esc(plan.session.name)}</span></div>
+      <div class="section-head"><h2 class="section-title">Latihan</h2><button class="link-btn" type="button" data-tab="jadwal">${esc(programOf().short)} · ${esc(plan.session.name)} ›</button></div>
       <div class="card glass">${workoutBody(plan)}</div>
     </section>`;
 
@@ -523,7 +527,7 @@ function viewToday() {
       <div class="section-head"><h2 class="section-title">Catatan</h2></div>
       <div class="card glass">
         ${locked ? '' : `<form class="inline-form" data-form="quickWeight">
-          <label class="stack"><span>Berat badan ${n === t ? 'hari ini' : 'hari ini (H' + n + ')'}</span>
+          <label class="stack"><span>Berat badan ${n === t ? 'hari ini' : 'hari ' + n}</span>
             <span class="unit-wrap"><input class="field-input" id="qkg" name="kg" inputmode="decimal" autocomplete="off" placeholder="cth. 72,5" value="${weightToday ? fmt(weightToday.kg, 1) : ''}"><span class="unit">kg</span></span>
           </label>
           <button class="btn" type="submit">Simpan</button>
@@ -552,10 +556,11 @@ function workoutBody(plan) {
       <div class="chips">${['Stretch paha depan', 'Stretch hamstring', 'Cat-cow', 'Child pose', 'Stretch dada di pintu'].map(x => `<span class="chip">${x}</span>`).join('')}</div>`;
     return html;
   }
+  if (session.optional) html += `<p class="tip">${esc(session.skip)}</p>`;
   if (session.exercises.length) {
     if (session.circuit) html += `<p class="tip">Sirkuit <b>${session.circuit[pi]}</b>. Lakukan semua gerakan berurutan tanpa jeda, istirahat 60–90 dtk tiap putaran.</p>`;
     html += `<ol class="ex-list">${session.exercises.map(e => `
-      <li class="ex"><span class="ex-name">${esc(e.n)}</span><span class="ex-rx">${esc(e.rx[pi])}</span>${e.alt ? `<span class="ex-alt">Alternatif: ${esc(e.alt)}</span>` : '<span class="ex-alt">&nbsp;</span>'}</li>`).join('')}</ol>`;
+      <li class="ex${e.leg ? ' ex-leg' : ''}"><span class="ex-name">${esc(e.n)}${e.leg ? ' <span class="tag">Kaki</span>' : ''}</span><span class="ex-rx">${esc(e.rx[pi])}</span>${e.alt ? `<span class="ex-alt">Alternatif: ${esc(e.alt)}</span>` : '<span class="ex-alt">&nbsp;</span>'}</li>`).join('')}</ol>`;
     if (!session.circuit) html += `<p class="tip">Istirahat 60–90 dtk antar set. Kalau semua repetisi terasa ringan, naikkan beban 2,5 kg minggu depan.</p>`;
   }
   if (session.abs) {
@@ -613,11 +618,24 @@ function viewJadwal() {
     </section>`;
   }).join('');
 
-  const codes = WEEK_ORDER.map(k => `<span><b>${SESSIONS[k].code}</b>&nbsp;${SESSIONS[k].name}</span>`).join('');
+  const codes = [...new Map(programOf().week.map(k => [SESSIONS[k].code, SESSIONS[k].name])).entries()].map(([c, nm]) => `<span><b>${c}</b>&nbsp;${nm}</span>`).join('');
+  const prog = programOf();
+  const programs = PROGRAMS.map(pg => {
+    const days = pg.week.map((k, i) => `${HARI[(state.restDay + 1 + i) % 7].slice(0, 3)} ${SESSIONS[k].code}`).join(' · ');
+    return `<button type="button" class="row pattern-row" role="radio" aria-checked="${pg.id === prog.id}" data-program="${pg.id}">
+      <span class="radio" aria-hidden="true"></span>
+      <span class="row-text"><span class="row-title">${esc(pg.name)}</span><span class="row-sub">${esc(pg.desc)}</span>
+        <span class="pattern-stats"><span>${days}</span></span></span>
+    </button>`;
+  }).join('');
 
   return `
     <div class="title-row"><div><h1 class="large-title">Jadwal</h1><p class="subtitle">${dateShort(startDate())} – ${dateShort(dateOf(TOTAL))} ${dateOf(TOTAL).getFullYear()} · libur tiap ${HARI[state.restDay]}</p></div></div>
     ${stats}
+    <section class="section">
+      <div class="section-head"><h2 class="section-title">Program latihan</h2><span class="section-meta">libur tiap ${HARI[state.restDay]}</span></div>
+      <div class="list glass" role="radiogroup" aria-label="Program latihan">${programs}</div>
+    </section>
     ${key}
     ${blocks}
     <p class="footnote key">${codes}</p>`;
@@ -794,7 +812,7 @@ function viewWarteg() {
   const rotation = Array.from({ length: days }, (_, i) => {
     const dm = buildMenu(cur.id, i, t0);
     const t = sumFoods(menuItems(dm));
-    const sub = cur.meals === 3 ? `Hari ${SESSIONS[WEEK_ORDER[i]].name}` : `${countEggs(menuItems(dm))} telur rebus`;
+    const sub = cur.meals === 3 ? `Hari ${SESSIONS[programOf().week[i]].name}` : `${countEggs(menuItems(dm))} telur rebus`;
     return `<div class="row menu-row"><span class="row-text"><span class="row-title">${esc(dm.name)}</span><span class="row-sub">${sub}</span></span><span class="row-value"><b>${fmt(t.kcal)} kkal</b><br>${t.p} g · ${rupiah(t.price)}</span></div>`;
   }).join('');
   const avgPrice = stats.find(([pt]) => pt.id === cur.id)[1].price;
@@ -1099,6 +1117,14 @@ document.addEventListener('click', e => {
   if (tabBtn) { goTab(tabBtn.dataset.tab); return; }
   const dayBtn = e.target.closest('[data-day]');
   if (dayBtn) { ui.day = +dayBtn.dataset.day; goTab('today'); return; }
+  const progBtn = e.target.closest('[data-program]');
+  if (progBtn) {
+    state.program = progBtn.dataset.program;
+    commit();
+    render();
+    toast('Program: ' + programOf().short);
+    return;
+  }
   const patBtn = e.target.closest('[data-pattern]');
   if (patBtn) {
     state.pattern = patBtn.dataset.pattern;

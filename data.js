@@ -170,10 +170,52 @@ const SESSIONS = {
     { n: 'Mountain climber',            alt: null,                 rx: ['30 dtk', '40 dtk', '45 dtk'] },
   ]},
   rest: { code: '—', name: 'Istirahat Aktif', focus: 'Pemulihan', abs: false, cardio: 'walk', exercises: [] },
+
+  // Program Push/Pull/Push: tiap sesi beban + 1 latihan kaki (leg: true)
+  pushBahu: { code: 'PB', name: 'Push · Bahu', focus: 'Bahu, trisep + 1 kaki', abs: false, cardio: 'liss', exercises: [
+    { n: 'Dumbbell shoulder press',     alt: 'Machine shoulder press', rx: ['3 × 10–12', '4 × 8–10', '4 × 6–8'] },
+    { n: 'Lateral raise',               alt: 'Cable lateral raise',    rx: ['3 × 12–15', '4 × 12–15', '4 × 12–15'] },
+    { n: 'Incline dumbbell press',      alt: 'Push-up',                rx: ['3 × 10–12', '3 × 10',    '3 × 8'] },
+    { n: 'Rear delt fly',               alt: 'Face pull',              rx: ['3 × 15',    '3 × 15',    '3 × 15'] },
+    { n: 'Overhead triceps extension',  alt: 'Triceps pushdown',       rx: ['3 × 12',    '3 × 12',    '3 × 10–12'] },
+    { n: 'Goblet squat',                alt: 'Bodyweight squat', leg: true, rx: ['3 × 12', '3 × 10', '4 × 8'] },
+  ]},
+  pullBack: { code: 'PL', name: 'Pull · Punggung', focus: 'Punggung, bisep + 1 kaki', abs: false, cardio: 'liss', exercises: [
+    { n: 'Lat pulldown',                alt: 'Assisted pull-up',       rx: ['3 × 10–12', '4 × 8–10', '4 × 6–8'] },
+    { n: 'Seated cable row',            alt: 'Dumbbell row',           rx: ['3 × 10–12', '4 × 8–10', '4 × 8'] },
+    { n: 'One-arm dumbbell row',        alt: null,                     rx: ['3 × 10/sisi', '3 × 10/sisi', '3 × 8/sisi'] },
+    { n: 'Face pull',                   alt: 'Band pull-apart',        rx: ['3 × 15',    '3 × 15',    '3 × 15'] },
+    { n: 'Dumbbell curl',               alt: 'Hammer curl',            rx: ['3 × 12',    '3 × 10–12', '3 × 10'] },
+    { n: 'Romanian deadlift',           alt: 'Good morning', leg: true, rx: ['3 × 10', '4 × 8–10', '4 × 8'] },
+  ]},
+  pushDada: { code: 'PD', name: 'Push · Dada', focus: 'Dada, trisep + 1 kaki', abs: false, cardio: 'liss', exercises: [
+    { n: 'Bench press (barbell / dumbbell)', alt: 'Push-up',           rx: ['3 × 10',    '4 × 8',     '4 × 6–8'] },
+    { n: 'Incline dumbbell press',      alt: 'Decline push-up',        rx: ['3 × 10–12', '3 × 10',    '4 × 8'] },
+    { n: 'Cable fly / pec deck',        alt: 'Dumbbell fly',           rx: ['3 × 12–15', '3 × 12–15', '3 × 12'] },
+    { n: 'Lateral raise',               alt: null,                     rx: ['3 × 15',    '3 × 15',    '3 × 15'] },
+    { n: 'Triceps pushdown',            alt: 'Bench dip',              rx: ['3 × 12',    '3 × 12',    '3 × 10–12'] },
+    { n: 'Leg press',                   alt: 'Walking lunge', leg: true, rx: ['3 × 12', '3 × 12', '4 × 10'] },
+  ]},
+  legOpt: { code: 'LG', name: 'Leg Day (opsional)', focus: 'Paha, glutes, betis', abs: true, cardio: null, optional: true,
+    skip: 'Tidak sempat ke gym? Ganti jalan kaki 45 menit + sirkuit perut. Tetap dihitung tercapai.', exercises: [
+    { n: 'Squat (barbell / goblet)',    alt: 'Bodyweight squat',       rx: ['3 × 10',    '4 × 8',     '4 × 6–8'] },
+    { n: 'Hip thrust',                  alt: 'Glute bridge',           rx: ['3 × 10–12', '4 × 8–10',  '4 × 8'] },
+    { n: 'Bulgarian split squat',       alt: 'Reverse lunge',          rx: ['3 × 10/kaki', '3 × 10/kaki', '3 × 8/kaki'] },
+    { n: 'Lying leg curl',              alt: 'Hamstring slider',       rx: ['3 × 12',    '3 × 12',    '3 × 10'] },
+    { n: 'Standing calf raise',         alt: null,                     rx: ['3 × 15',    '3 × 15',    '4 × 15'] },
+  ]},
+  cardioLiss: { code: 'KC', name: 'Kardio & Core', focus: 'Kardio santai, perut', abs: true, cardio: 'liss30', exercises: [] },
 };
 
-// Urutan sesi dalam seminggu, dimulai sehari setelah hari libur.
-const WEEK_ORDER = ['upperA', 'lowerA', 'cardioCore', 'upperB', 'lowerB', 'fullBody', 'rest'];
+// Program latihan. `week` = urutan sesi dalam seminggu, dimulai sehari setelah hari libur.
+const PROGRAMS = [
+  { id: 'ppp', short: 'Push/Pull/Push', name: 'Push/Pull/Push · 3–4× seminggu',
+    desc: 'Bahu, punggung, dada + 1 latihan kaki tiap sesi. Leg day opsional; hari lain kardio & perut.',
+    week: ['pushBahu', 'cardioCore', 'pullBack', 'cardioLiss', 'pushDada', 'legOpt', 'rest'] },
+  { id: 'ul6', short: 'Upper/Lower 6×', name: 'Upper/Lower · 6× seminggu',
+    desc: '4 hari beban, 1 hari kardio, 1 sirkuit full body. Lebih berat, hasil lebih cepat.',
+    week: ['upperA', 'lowerA', 'cardioCore', 'upperB', 'lowerB', 'fullBody', 'rest'] },
+];
 
 const CARDIO = {
   liss: ['Jalan incline treadmill 15 menit (incline 8–10%, 5 km/jam)',
@@ -182,6 +224,9 @@ const CARDIO = {
   hiit: ['Kardio santai 30 menit: sepeda statis atau jalan cepat',
          'HIIT sepeda statis: 10 × (30 dtk cepat + 60 dtk santai), lalu jalan 10 menit',
          'HIIT sepeda/treadmill: 12 × (30 dtk cepat + 45 dtk santai), lalu jalan 10 menit'],
+  liss30: ['Jalan cepat atau incline treadmill 30 menit',
+           'Jalan cepat atau incline treadmill 35 menit',
+           'Jalan cepat atau incline treadmill 40 menit'],
   walk: ['Jalan santai 30–45 menit + stretching 10 menit',
          'Jalan santai 30–45 menit + stretching 10 menit',
          'Jalan santai 45 menit + stretching 10 menit'],

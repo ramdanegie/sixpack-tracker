@@ -482,6 +482,7 @@ svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round
 }
 .ex-name { font-size: 16px; font-weight: 500; }
 .ex-alt { grid-column: 2; font-size: 13px; color: var(--label-2); }
+.tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: 11px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; vertical-align: 2px; background: var(--green-tint); color: var(--green-ink); }
 .ex-rx { grid-column: 3; grid-row: 1 / span 2; font-family: var(--font-round); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .sub-card { padding: 14px; border-radius: var(--r-m); background: var(--fill); display: flex; flex-direction: column; gap: 8px; }
 .sub-card h3 { font-size: 15px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
