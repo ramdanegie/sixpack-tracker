@@ -1,66 +1,59 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sixpack 60 Hari
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Prototipe aplikasi jadwal 60 hari menuju sixpack, mobile-first dengan tampilan kaca ala iOS.
 
-## About Laravel
+- **4 pilihan pola makan**, semuanya memenuhi target protein harian. Jumlah telur dan porsi nasi dihitung otomatis dari berat badanmu:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+  | Pola | Isi | Contoh (70 kg) |
+  |---|---|---|
+  | Warteg 3× + camilan | Menu warteg bergilir: ayam, ikan, telur, tempe, tahu | ±5 telur, ±Rp54.500/hari |
+  | 2× makan · Telur saja | Nasi, sayur, telur rebus | ±16 telur, ±Rp41.500/hari |
+  | 2× makan · Hemat | Telur + tempe/tahu masak sendiri | ±7 telur, ±Rp33.500/hari |
+  | 2× makan · Sedang | Ayam/ikan + tempe/tahu dari warteg | ±6 telur, ±Rp54.500/hari |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+  Pilih di tab **Warteg → Pola makan**. Kalau telur lebih dari 6 butir sehari, aplikasi mengingatkan untuk cek kolesterol.
+- **Program gym 3 fase**: Fondasi (hari 1–21), Bakar Lemak (22–42), Definisi (43–60). Beban, repetisi, dan kardio naik tiap fase. Pilih program di tab **Jadwal**:
+  - **Push/Pull/Push · 3–4×** (bawaan): Push Bahu, Pull Punggung, Push Dada, masing-masing + 1 latihan kaki. Leg day di hari ke-4 opsional; kalau dilewati, ganti jalan 45 menit dan tetap dihitung tercapai. Hari lain kardio & perut.
+  - **Upper/Lower · 6×**: 4 hari beban, 1 hari kardio, 1 sirkuit full body.
+- **Checklist harian**: makan, protein, bebas gorengan, latihan, perut, langkah, air, tidur. Hari dianggap *tercapai* kalau ≥ 80% dicentang. Progres tampil sebagai cincin Makan / Gerak / Pulih.
+- **Jadwal 60 hari**: kalender per fase dengan status tiap hari (tercapai, sebagian, tidak tercapai), streak, dan rata-rata.
+- **Berat & tinggi badan**: hitung BMI (kategori Kemenkes), kebutuhan kalori (Mifflin-St Jeor, defisit ±20%), protein 1,6 g/kg, air, perkiraan lemak tubuh, target realistis 60 hari, dan grafik berat.
+- **Tersimpan otomatis** di browser (localStorage). Ada backup `.json` dan pulihkan dari file atau teks.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Teknologi
 
-## Learning Laravel
+HTML + CSS + JavaScript biasa. Tanpa framework, tanpa build, tanpa server.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+```
+index.html            kerangka halaman
+style.css             tema kaca iOS (terang & gelap otomatis)
+data.js               data menu warteg, latihan, fase, checklist  ← ubah harga/menu di sini
+app.js                logika, perhitungan, penyimpanan
+manifest.webmanifest  supaya bisa dipasang di layar utama HP
+```
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Cara pakai
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Paling cepat:** buka `index.html` langsung di browser.
 
-## Laravel Sponsors
+**Di HP (disarankan):** aktifkan GitHub Pages: repo → *Settings* → *Pages* → *Deploy from a branch* → pilih branch dan folder `/ (root)`. Buka link-nya di HP, lalu:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+- iPhone: Safari → Bagikan → **Tambah ke Layar Utama**
+- Android: menu Chrome → **Tambahkan ke layar utama**
 
-### Premium Partners
+Aplikasi akan terbuka layar penuh seperti app biasa.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[OP.GG](https://op.gg)**
-- **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
-- **[Lendio](https://lendio.com)**
+**Jalankan lokal:**
 
-## Contributing
+```bash
+python3 -m http.server 8000
+# buka http://localhost:8000
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Penyimpanan data
 
-## Code of Conduct
+Data tersimpan di browser perangkat yang dipakai. Kalau ganti HP atau menghapus data browser, data hilang. Jadi tekan **Profil → Unduh backup** sesekali, dan **Pulihkan dari backup** di perangkat baru.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Catatan
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Angka kalori, protein, dan harga adalah perkiraan per porsi warteg kota besar. Perkiraan lemak tubuh dihitung dari BMI dan bisa meleset ±5%. Untuk orang dewasa sehat; kalau punya kondisi medis, konsultasikan dulu ke dokter.

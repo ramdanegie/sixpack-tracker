@@ -1,0 +1,16 @@
+{
+  "name": "Sixpack 60 Hari",
+  "short_name": "Sixpack 60",
+  "description": "Jadwal 60 hari menuju sixpack: menu warteg murah, gym, checklist, dan berat badan.",
+  "lang": "id",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#E8EDF5",
+  "theme_color": "#0A84FF",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
