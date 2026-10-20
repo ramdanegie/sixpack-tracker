@@ -49,6 +49,13 @@ const FOODS = {
   ayam_tepung: { name: 'Ayam goreng tepung / kremes',   kcal: 330, p: 22, price: 13000, cat: 'Lauk hewani', grade: 'hindari' },
   perkedel:    { name: 'Perkedel kentang',              kcal: 120, p: 2,  price: 2500,  cat: 'Lain-lain', grade: 'hindari' },
   kuah_santan: { name: 'Siraman kuah santan / rendang', kcal: 150, p: 1,  price: 0,     cat: 'Lain-lain', grade: 'hindari' },
+
+  // Masak sendiri (dipakai pola Hemat & Telur saja)
+  nasi_rumah:  { name: 'Nasi masak sendiri 1 porsi',    kcal: 260, p: 5,  price: 1500,  cat: 'Masak sendiri', grade: 'pilih' },
+  tempe_rumah: { name: 'Tempe goreng masak sendiri (100 g)', kcal: 230, p: 19, price: 2500, cat: 'Masak sendiri', grade: 'pilih', tip: 'Satu papan tempe ±Rp5.000 cukup untuk 2 porsi.' },
+  orek_rumah:  { name: 'Orek tempe masak sendiri (100 g tempe)', kcal: 260, p: 19, price: 3000, cat: 'Masak sendiri', grade: 'pilih', tip: 'Pakai sedikit minyak dan gula.' },
+  tahu_rumah:  { name: 'Tahu putih kukus/rebus (200 g)', kcal: 160, p: 16, price: 2500, cat: 'Masak sendiri', grade: 'pilih' },
+  sayur_rumah: { name: 'Sayur bening / tumis masak sendiri', kcal: 50, p: 2, price: 2000, cat: 'Masak sendiri', grade: 'pilih' },
 };
 
 const MEAL_SLOTS = [
@@ -188,7 +195,7 @@ const ABS = [
 
 // Checklist harian. Label dinamis diisi di app.js.
 const CHECK_ITEMS = [
-  { id: 'pagi',    group: 'Makan' },
+  { id: 'pagi',    group: 'Makan', only3: true },
   { id: 'siang',   group: 'Makan' },
   { id: 'malam',   group: 'Makan' },
   { id: 'protein', group: 'Makan' },
@@ -199,3 +206,45 @@ const CHECK_ITEMS = [
   { id: 'air',     group: 'Pulih' },
   { id: 'tidur',   group: 'Pulih' },
 ];
+
+/*
+ * Pola makan. 'warteg3' memakai MENUS di atas. Pola 2× sehari memakai MENUS2;
+ * telur rebus ditambahkan otomatis sampai target protein harian tercapai.
+ * minEggs/maxEggs = batas telur per hari.
+ */
+const PATTERNS = [
+  { id: 'warteg3', short: 'Warteg 3×', name: 'Warteg 3× + camilan', desc: 'Menu warteg bergilir: ayam, ikan, telur, tempe, tahu.', meals: 3 },
+  { id: 'telur2',  short: 'Telur saja', name: '2× makan · Telur saja', desc: 'Paling simpel: nasi, sayur, dan telur rebus.', meals: 2, minEggs: 4, maxEggs: 20 },
+  { id: 'hemat2',  short: 'Hemat', name: '2× makan · Hemat', desc: 'Telur + tempe/tahu masak sendiri, protein termurah.', meals: 2, minEggs: 2, maxEggs: 20 },
+  { id: 'sedang2', short: 'Sedang', name: '2× makan · Sedang', desc: 'Ayam atau ikan + tempe/tahu dari warteg, telur lebih sedikit.', meals: 2, minEggs: 0, maxEggs: 20 },
+];
+
+// Slot pola 2×. Id sengaja sama dengan checklist 'siang' & 'malam'.
+const MEAL_SLOTS_2 = [
+  { id: 'siang', label: 'Makan pertama', time: '10.00–13.00' },
+  { id: 'malam', label: 'Makan kedua',   time: '17.30–19.30' },
+];
+
+const MENUS2 = {
+  telur2: [
+    { name: 'Telur + Sayur Bening', meals: { siang: [['nasi_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['sayur_rumah', 1]] } },
+  ],
+  hemat2: [
+    { name: 'Tempe & Tahu',    meals: { siang: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Orek Tempe',      meals: { siang: [['nasi_rumah', 1], ['orek_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Tahu Kukus',      meals: { siang: [['nasi_rumah', 1], ['tahu_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Tempe Goreng',    meals: { siang: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Orek & Tahu',     meals: { siang: [['nasi_rumah', 1], ['orek_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Tahu & Tempe',    meals: { siang: [['nasi_rumah', 1], ['tempe_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]] } },
+    { name: 'Orek Malam',    meals: { siang: [['nasi_rumah', 1], ['tempe_rumah', 1], ['sayur_rumah', 1]], malam: [['nasi_rumah', 1], ['orek_rumah', 1], ['tahu_rumah', 1], ['sayur_rumah', 1]] } },
+  ],
+  sedang2: [
+    { name: 'Ayam Bakar & Tongkol', meals: { siang: [['nasi_full', 1], ['ayam_bakar', 1], ['tempe_goreng', 1], ['sayur_asem', 1]], malam: [['nasi_full', 1], ['tongkol', 1], ['tahu_bacem', 1], ['bayam', 1]] } },
+    { name: 'Tongkol & Ati Ampela', meals: { siang: [['nasi_full', 1], ['tongkol', 1], ['tempe_goreng', 1], ['kangkung', 1]], malam: [['nasi_full', 1], ['ati_ampela', 1], ['tahu_bacem', 1], ['sop', 1]] } },
+    { name: 'Ikan Kembung',         meals: { siang: [['nasi_full', 1], ['kembung', 1], ['tempe_goreng', 1], ['capcay', 1]], malam: [['nasi_full', 1], ['tongkol', 1], ['tahu_bacem', 1], ['labu_siam', 1]] } },
+    { name: 'Ati Ampela & Ayam',    meals: { siang: [['nasi_full', 1], ['ati_ampela', 1], ['tempe_goreng', 1], ['sop', 1]], malam: [['nasi_full', 1], ['ayam_bakar', 1], ['toge', 1]] } },
+    { name: 'Ayam Bakar & Pepes',   meals: { siang: [['nasi_full', 1], ['ayam_bakar', 1], ['tahu_bacem', 1], ['sayur_asem', 1]], malam: [['nasi_full', 1], ['tongkol', 1], ['pepes_tahu', 1], ['kangkung', 1]] } },
+    { name: 'Tongkol & Kembung',    meals: { siang: [['nasi_full', 1], ['tongkol', 1], ['tempe_goreng', 1], ['labu_siam', 1]], malam: [['nasi_full', 1], ['kembung', 1], ['tahu_bacem', 1], ['bayam', 1]] } },
+    { name: 'Ikan & Lalapan',       meals: { siang: [['nasi_full', 1], ['kembung', 1], ['tempe_goreng', 1], ['lalapan', 1], ['sop', 1]], malam: [['nasi_full', 1], ['ayam_bakar', 1], ['toge', 1]] } },
+  ],
+};

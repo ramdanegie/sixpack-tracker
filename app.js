@@ -51,7 +51,7 @@ const ICON = {
 
 /* ---------- State & penyimpanan ---------- */
 function defaultState() {
-  return { v: 1, start: iso(new Date()), restDay: 0, profile: null, checks: {}, notes: {}, weights: [], updatedAt: 0 };
+  return { v: 1, start: iso(new Date()), restDay: 0, pattern: 'warteg3', profile: null, checks: {}, notes: {}, weights: [], updatedAt: 0 };
 }
 
 function normalize(s) {
@@ -63,6 +63,7 @@ function normalize(s) {
     v: 1,
     start: isISO(s.start) ? s.start : d.start,
     restDay: Number.isInteger(s.restDay) && s.restDay >= 0 && s.restDay <= 6 ? s.restDay : 0,
+    pattern: PATTERNS.some(pt => pt.id === s.pattern) ? s.pattern : 'warteg3',
     profile: profileOk ? {
       nama: String(p.nama || '').slice(0, 40),
       sex: p.sex === 'P' ? 'P' : 'L',
@@ -199,10 +200,15 @@ function planFor(n) {
   const phase = phaseOf(n);
   const idx = (date.getDay() - state.restDay + 6) % 7; // 0 = sehari setelah hari libur
   const key = WEEK_ORDER[idx];
-  return { n, date, phase, pi: phase.id - 1, key, session: SESSIONS[key], menu: MENUS[idx], rest: key === 'rest' };
+  return { n, date, phase, pi: phase.id - 1, idx, key, session: SESSIONS[key], rest: key === 'rest' };
 }
 
-function itemsFor(plan) { return CHECK_ITEMS.filter(i => !i.absOnly || plan.session.abs); }
+function patternOf(id = state.pattern) { return PATTERNS.find(pt => pt.id === id) || PATTERNS[0]; }
+
+function itemsFor(plan) {
+  const three = patternOf().meals === 3;
+  return CHECK_ITEMS.filter(i => (!i.absOnly || plan.session.abs) && (!i.only3 || three));
+}
 
 function scoreFor(n) {
   const plan = planFor(n);
@@ -268,48 +274,96 @@ function sumFoods(list) {
     return a;
   }, { kcal: 0, p: 0, price: 0 });
 }
-function menuTotals(menu) { return sumFoods(MEAL_SLOTS.flatMap(s => menu.meals[s.id])); }
+const countEggs = items => items.reduce((a, [id, q]) => a + (id.startsWith('telur_') ? q : 0), 0);
+function menuItems(dm) { return dm.slots.flatMap(s => dm.meals[s.id]); }
 
-function adjustFor(base, m) {
-  const tips = [];
-  let k = base.kcal, p = base.p;
-  if (m.protein - p > 4) {
-    const eggs = Math.min(3, Math.ceil((m.protein - p) / 6));
-    tips.push([`Tambah telur rebus ×${eggs} di camilan`, `+${eggs * 6} g protein`]);
-    k += eggs * 75; p += eggs * 6;
-    if (m.protein - p > 4) {
-      tips.push(['Tambah tempe goreng 2 ptg', '+10 g protein']);
-      k += 160; p += 10;
-    }
+// Target harian; tanpa profil dipakai contoh 110 g protein / 2.000 kkal.
+function targets() {
+  const m = metrics();
+  return m ? { protein: m.protein, kcal: m.kcal, real: true } : { protein: 110, kcal: 2000, real: false };
+}
+
+// Menu satu hari untuk pola tertentu. Pola 2× menambah telur rebus sampai target protein tercapai.
+function buildMenu(pid, idx, t) {
+  const pat = patternOf(pid);
+  if (pat.meals === 3) {
+    const menu = MENUS[idx % MENUS.length];
+    return { pat, name: menu.name, slots: MEAL_SLOTS, meals: menu.meals };
   }
-  const gap = m.kcal - k;
+  const list = MENUS2[pat.id];
+  const base = list[idx % list.length];
+  const baseP = sumFoods([...base.meals.siang, ...base.meals.malam]).p;
+  const eggs = clamp(Math.ceil((t.protein - baseP) / FOODS.telur_rebus.p), pat.minEggs, pat.maxEggs);
+  const e1 = Math.ceil(eggs / 2);
+  const withEggs = (items, n) => (n ? [...items, ['telur_rebus', n]] : items);
+  return { pat, name: base.name, slots: MEAL_SLOTS_2, meals: { siang: withEggs(base.meals.siang, e1), malam: withEggs(base.meals.malam, eggs - e1) } };
+}
+
+function adjustFor(base, t, pat) {
+  const tips = [];
+  let k = base.kcal, p = base.p, price = 0, eggs = 0;
+  if (t.protein - p > 4 && pat.meals === 3) {
+    eggs = Math.min(3, Math.ceil((t.protein - p) / 6));
+    tips.push([`Tambah telur rebus ×${eggs} di camilan`, `+${eggs * 6} g protein`]);
+    k += eggs * 75; p += eggs * 6; price += eggs * FOODS.telur_rebus.price;
+  }
+  if (t.protein - p > 4) {
+    tips.push(['Tambah tempe goreng 2 ptg', '+10 g protein']);
+    k += 160; p += 10; price += FOODS.tempe_goreng.price;
+  }
+  const gap = t.kcal - k;
   if (gap >= 100) {
     const halves = Math.min(4, Math.round(gap / 130));
-    tips.push([halves === 1 ? 'Tambah nasi ½ porsi di makan malam' : `Tambah nasi ½ porsi ×${halves} (siang & malam)`, `+${halves * 130} kkal`]);
-    k += halves * 130;
+    const where = pat.meals === 3 ? ['di makan malam', '(siang & malam)'] : ['di makan kedua', '(dibagi 2 kali makan)'];
+    tips.push([halves === 1 ? `Tambah nasi ½ porsi ${where[0]}` : `Tambah nasi ½ porsi ×${halves} ${where[1]}`, `+${halves * 130} kkal`]);
+    k += halves * 130; price += halves * FOODS.nasi_half.price;
   } else if (gap <= -100) {
-    const cuts = [
-      ['Nasi siang cukup ½ porsi', 130],
-      ['Makan malam tanpa nasi, tambah 1 sayur', 100],
-      ['Lewati pisang/ubi, ganti timun atau jeruk', 70],
+    const cuts = pat.meals === 3 ? [
+      ['Nasi siang cukup ½ porsi', 130, 1500],
+      ['Makan malam tanpa nasi, tambah 1 sayur', 100, 0],
+      ['Lewati pisang/ubi, ganti timun atau jeruk', 70, 2000],
+    ] : [
+      ['Nasi makan kedua cukup ½ porsi', 130, 1000],
+      ['Nasi makan pertama cukup ½ porsi', 130, 1000],
+      ['Makan kedua tanpa nasi, tambah sayur', 100, 0],
     ];
-    for (const [text, kcal] of cuts) {
-      if (k - m.kcal < 65) break;
+    for (const [text, kcal, save] of cuts) {
+      if (k - t.kcal < 65) break;
       tips.push([text, `−${kcal} kkal`]);
-      k -= kcal;
+      k -= kcal; price -= save;
     }
   }
-  return { tips, kcal: k, p };
+  return { tips, kcal: k, p, price, eggs };
+}
+
+// Rata-rata harian satu pola (setelah porsi disesuaikan) untuk perbandingan.
+function patternStats(pid, t) {
+  const pat = patternOf(pid);
+  const n = pat.meals === 3 ? MENUS.length : MENUS2[pid].length;
+  let k = 0, p = 0, price = 0, eggs = 0;
+  for (let i = 0; i < n; i++) {
+    const dm = buildMenu(pid, i, t);
+    const items = menuItems(dm);
+    const base = sumFoods(items);
+    const a = adjustFor(base, t, pat);
+    k += a.kcal; p += a.p; price += base.price + a.price; eggs += countEggs(items) + a.eggs;
+  }
+  return { kcal: Math.round(k / n / 10) * 10, p: Math.round(p / n), price: Math.round(price / n / 500) * 500, eggs: Math.round(eggs / n) };
 }
 
 /* ---------- Teks checklist ---------- */
-function checkText(id, plan, m) {
+function checkText(id, plan, m, dm) {
   const { phase, pi, session } = plan;
+  const two = dm.pat.meals === 2;
   switch (id) {
-    case 'pagi': return ['Sarapan sesuai menu', mealLine(plan.menu.meals.pagi)];
-    case 'siang': return ['Makan siang warteg', mealLine(plan.menu.meals.siang)];
-    case 'malam': return ['Makan malam sebelum 19.30', mealLine(plan.menu.meals.malam)];
-    case 'protein': return [m ? `Protein ≥ ${m.protein} g` : 'Protein cukup', m ? 'Lauk hewani + tempe/tahu tiap makan' : 'Isi profil supaya target gram dihitung'];
+    case 'pagi': return ['Sarapan sesuai menu', mealLine(dm.meals.pagi)];
+    case 'siang': return [two ? 'Makan pertama sesuai menu' : 'Makan siang warteg', mealLine(dm.meals.siang)];
+    case 'malam': return [two ? 'Makan kedua sebelum 19.30' : 'Makan malam sebelum 19.30', mealLine(dm.meals.malam)];
+    case 'protein': {
+      const eggs = countEggs(menuItems(dm));
+      const sub = two ? `Termasuk ${eggs} telur rebus` : m ? 'Lauk hewani + tempe/tahu tiap makan' : 'Isi profil supaya target gram dihitung';
+      return [m ? `Protein ≥ ${m.protein} g` : 'Protein cukup', sub];
+    }
     case 'bersih': return ['Bebas gorengan & minuman manis', 'Tanpa gorengan tepung, kerupuk, es teh manis'];
     case 'latihan': return plan.rest
       ? ['Jalan santai + stretching', CARDIO.walk[pi]]
@@ -350,6 +404,8 @@ function viewToday() {
   const t = todayN();
   const plan = planFor(n);
   const m = metrics();
+  const t0 = targets();
+  const dm = buildMenu(state.pattern, plan.idx, t0);
   const score = scoreFor(n);
   const st = statusFor(n, t);
   const locked = n > t;
@@ -371,7 +427,7 @@ function viewToday() {
     const gs = score.groups[g];
     return `<div class="group-label" style="--c:${GROUP_COLOR[g]}"><span><i></i>${g}</span><span data-gcount="${g}">${gs.done}/${gs.total}</span></div>` +
       items.map(it => {
-        const [title, sub] = checkText(it.id, plan, m);
+        const [title, sub] = checkText(it.id, plan, m, dm);
         return `<label class="row check-row${locked ? ' locked' : ''}" style="--c:${GROUP_COLOR[g]}">
           <input type="checkbox" data-check="${it.id}"${checks[it.id] ? ' checked' : ''}${locked ? ' disabled' : ''}>
           <span class="tick" aria-hidden="true">${ICON.check}</span>
@@ -415,11 +471,12 @@ function viewToday() {
       <div class="list glass">${checklist}</div>
     </section>`;
 
-  const base = menuTotals(plan.menu);
-  const meals = MEAL_SLOTS.map(slot => `
+  const base = sumFoods(menuItems(dm));
+  const eggCount = countEggs(menuItems(dm));
+  const meals = dm.slots.map(slot => `
     <div class="meal">
       <div class="meal-head"><span class="meal-name">${slot.label}</span><span class="meal-time">${slot.time}</span></div>
-      <ul class="food-list">${plan.menu.meals[slot.id].map(([id, q]) => {
+      <ul class="food-list">${dm.meals[slot.id].map(([id, q]) => {
         const f = FOODS[id];
         return `<li class="food"><span class="food-name">${esc(f.name)}${q > 1 ? ` <span class="qty">×${q}</span>` : ''}</span><span class="food-meta">${fmt(f.kcal * q)} kkal · ${fmt(f.p * q)} g protein</span><span class="price">${rupiah(f.price * q)}</span></li>`;
       }).join('')}</ul>
@@ -427,19 +484,22 @@ function viewToday() {
 
   let adjust;
   if (m) {
-    const a = adjustFor(base, m);
+    const a = adjustFor(base, t0, dm.pat);
     adjust = `<div class="adjust">
       <span class="adjust-title">Sesuaikan untuk targetmu · ${fmt(m.kcal)} kkal, ${m.protein} g protein</span>
       ${a.tips.length ? `<ul>${a.tips.map(([x, d]) => `<li><span>${esc(x)}</span><span>${d}</span></li>`).join('')}</ul>
       <span class="result">Hasilnya ± ${fmt(a.kcal)} kkal · ${fmt(a.p)} g protein</span>` : `<span class="result">Porsi menu ini sudah pas dengan targetmu.</span>`}
     </div>`;
   } else {
-    adjust = `<p class="tip">Isi profil supaya porsi nasi dan lauk disesuaikan dengan target kalorimu.</p>`;
+    adjust = `<p class="tip">${dm.pat.meals === 2 ? 'Jumlah telur memakai contoh target 110 g protein. ' : ''}Isi profil supaya porsi nasi dan lauk disesuaikan dengan targetmu.</p>`;
+  }
+  if (eggCount > 6) {
+    adjust += `<p class="tip">${eggCount} telur ≈ ${fmt(eggCount * 186)} mg kolesterol. Kebanyakan orang sehat tetap aman, tapi cek kolesterol darah sebelum dan sesudah 60 hari.</p>`;
   }
 
   const menuSection = `
     <section class="section">
-      <div class="section-head"><h2 class="section-title">Menu warteg</h2><span class="section-meta">${esc(plan.menu.name)}</span></div>
+      <div class="section-head"><h2 class="section-title">Menu ${dm.pat.meals === 3 ? 'warteg' : 'hari ini'}</h2><button class="link-btn" type="button" data-tab="warteg">${esc(dm.pat.short)} · ${esc(dm.name)} ›</button></div>
       <div class="card glass">
         ${meals}
         <div class="totals">
@@ -716,25 +776,46 @@ function viewWarteg() {
     return `<div class="row food-row" style="--c:${color}"><span class="grade-dot"></span><span class="row-text"><span class="row-title">${esc(f.name)}</span><span class="row-sub">${fmt(f.kcal)} kkal · ${fmt(f.p)} g protein${value}${f.tip ? '<br>' + esc(f.tip) : ''}</span></span>${f.price ? `<span class="price">${rupiah(f.price)}</span>` : ''}</div>`;
   }).join('')).join('');
 
-  const totals = MENUS.map(menuTotals);
-  const avgPrice = Math.round(totals.reduce((a, t) => a + t.price, 0) / totals.length / 500) * 500;
-  const rotation = MENUS.map((menu, i) => {
-    const t = totals[i];
-    return `<div class="row menu-row"><span class="row-text"><span class="row-title">${esc(menu.name)}</span><span class="row-sub">Hari ${SESSIONS[WEEK_ORDER[i]].name}</span></span><span class="row-value"><b>${fmt(t.kcal)} kkal</b><br>${t.p} g · ${rupiah(t.price)}</span></div>`;
+  const t0 = targets();
+  const cur = patternOf();
+  const stats = PATTERNS.map(pt => [pt, patternStats(pt.id, t0)]);
+  const allMet = stats.every(([, st]) => st.p >= t0.protein - 4);
+  const patterns = stats.map(([pt, st]) => {
+    const met = st.p >= t0.protein - 4;
+    return `<button type="button" class="row pattern-row" role="radio" aria-checked="${pt.id === cur.id}" data-pattern="${pt.id}">
+      <span class="radio" aria-hidden="true"></span>
+      <span class="row-text"><span class="row-title">${esc(pt.name)}</span><span class="row-sub">${esc(pt.desc)}</span>
+        <span class="pattern-stats"><span class="${met ? 'good' : 'warn'}">${st.p} g protein</span><span>${st.eggs} telur</span><span>${fmt(st.kcal)} kkal</span></span></span>
+      <span class="price">${rupiah(st.price)}</span>
+    </button>`;
   }).join('');
+
+  const days = cur.meals === 3 ? MENUS.length : MENUS2[cur.id].length;
+  const rotation = Array.from({ length: days }, (_, i) => {
+    const dm = buildMenu(cur.id, i, t0);
+    const t = sumFoods(menuItems(dm));
+    const sub = cur.meals === 3 ? `Hari ${SESSIONS[WEEK_ORDER[i]].name}` : `${countEggs(menuItems(dm))} telur rebus`;
+    return `<div class="row menu-row"><span class="row-text"><span class="row-title">${esc(dm.name)}</span><span class="row-sub">${sub}</span></span><span class="row-value"><b>${fmt(t.kcal)} kkal</b><br>${t.p} g · ${rupiah(t.price)}</span></div>`;
+  }).join('');
+  const avgPrice = stats.find(([pt]) => pt.id === cur.id)[1].price;
 
   return `
     <div class="title-row"><div><h1 class="large-title">Warteg</h1><p class="subtitle">Makan murah, protein tinggi, kalori terkontrol</p></div></div>
     <div class="split">
       <div class="col">
         <section class="section">
+          <div class="section-head"><h2 class="section-title">Pola makan</h2><span class="section-meta">${t0.real ? `targetmu ${t0.protein} g protein` : 'contoh target 110 g protein'}</span></div>
+          <div class="list glass" role="radiogroup" aria-label="Pola makan">${patterns}</div>
+          <p class="footnote">Rata-rata per hari setelah porsi disesuaikan. ${allMet ? 'Semua pilihan memenuhi target protein harian.' : 'Angka oranye belum memenuhi target; ikuti saran tambahan lauk di Hari Ini.'} Harga masak sendiri dihitung dari harga bahan di pasar.</p>
+        </section>
+        <section class="section">
           <div class="section-head"><h2 class="section-title">Cara pesan</h2></div>
           <div class="card glass"><ul class="tips">${WARTEG_TIPS.map(x => `<li><span>${esc(x)}</span></li>`).join('')}</ul></div>
         </section>
         <section class="section">
-          <div class="section-head"><h2 class="section-title">Menu bergilir</h2><span class="section-meta">± ${rupiah(avgPrice)}/hari</span></div>
+          <div class="section-head"><h2 class="section-title">${days > 1 ? 'Menu bergilir' : 'Menu harian'}</h2><span class="section-meta">${esc(cur.short)} · ± ${rupiah(avgPrice)}/hari</span></div>
           <div class="list glass">${rotation}</div>
-          <p class="footnote">Sebulan sekitar ${rupiah(avgPrice * 30)}. Harga perkiraan warteg kota besar, bisa beda di daerahmu.</p>
+          <p class="footnote">Angka sebelum porsi disesuaikan. Sebulan sekitar ${rupiah(avgPrice * 30)}. Harga perkiraan kota besar, bisa beda di daerahmu.</p>
         </section>
       </div>
       <div class="col">
@@ -776,6 +857,7 @@ function viewProfil() {
         <div class="list glass">
           <label class="row form-row"><span>Aktivitas</span><span class="select-wrap"><select class="field-input" id="paktivitas" name="aktivitas">${AKTIVITAS.map(([v, l]) => `<option value="${v}"${(p.aktivitas || 1.55) === v ? ' selected' : ''}>${l}</option>`).join('')}</select></span></label>
           <label class="row form-row"><span>Mulai program</span><input class="field-input" type="date" id="pstart" name="start" value="${state.start}"></label>
+          <button type="button" class="row form-row link-row" data-tab="warteg"><span>Pola makan</span><span class="row-value">${esc(patternOf().short)} ›</span></button>
           <label class="row form-row"><span>Libur latihan</span><span class="select-wrap"><select class="field-input" id="prest" name="restDay">${HARI.map((h, i) => `<option value="${i}"${state.restDay === i ? ' selected' : ''}>${h}</option>`).join('')}</select></span></label>
         </div>
         <p class="footnote">Aktivitas <b>Sedang</b> = kerja duduk + ikut gym program ini. <b>Tinggi</b> = kerja fisik (kurir, kuli, ojol) + gym. <b>Ringan</b> kalau belum rutin ke gym.</p>
@@ -1017,6 +1099,14 @@ document.addEventListener('click', e => {
   if (tabBtn) { goTab(tabBtn.dataset.tab); return; }
   const dayBtn = e.target.closest('[data-day]');
   if (dayBtn) { ui.day = +dayBtn.dataset.day; goTab('today'); return; }
+  const patBtn = e.target.closest('[data-pattern]');
+  if (patBtn) {
+    state.pattern = patBtn.dataset.pattern;
+    commit();
+    render();
+    toast('Pola makan: ' + patternOf().short);
+    return;
+  }
   const gradeBtn = e.target.closest('[data-grade]');
   if (gradeBtn) { ui.foodGrade = gradeBtn.dataset.grade; saveUI(); render(); return; }
   const act = e.target.closest('[data-act]');

@@ -2,7 +2,16 @@
 
 Prototipe aplikasi jadwal 60 hari menuju sixpack, mobile-first dengan tampilan kaca ala iOS.
 
-- **Menu warteg murah**: 7 menu bergilir (±Rp45.000/hari) lengkap dengan kalori, protein, dan harga per lauk. Porsi nasi dan lauk otomatis disesuaikan dengan target kalori dan protein kamu.
+- **4 pilihan pola makan**, semuanya memenuhi target protein harian. Jumlah telur dan porsi nasi dihitung otomatis dari berat badanmu:
+
+  | Pola | Isi | Contoh (70 kg) |
+  |---|---|---|
+  | Warteg 3× + camilan | Menu warteg bergilir: ayam, ikan, telur, tempe, tahu | ±5 telur, ±Rp54.500/hari |
+  | 2× makan · Telur saja | Nasi, sayur, telur rebus | ±16 telur, ±Rp41.500/hari |
+  | 2× makan · Hemat | Telur + tempe/tahu masak sendiri | ±7 telur, ±Rp33.500/hari |
+  | 2× makan · Sedang | Ayam/ikan + tempe/tahu dari warteg | ±6 telur, ±Rp54.500/hari |
+
+  Pilih di tab **Warteg → Pola makan**. Kalau telur lebih dari 6 butir sehari, aplikasi mengingatkan untuk cek kolesterol.
 - **Program gym 3 fase**: Fondasi (hari 1–21), Bakar Lemak (22–42), Definisi (43–60). Split Upper/Lower + sirkuit perut + kardio, 6 hari latihan dan 1 hari istirahat aktif.
 - **Checklist harian**: makan, protein, bebas gorengan, latihan, perut, langkah, air, tidur. Hari dianggap *tercapai* kalau ≥ 80% dicentang. Progres tampil sebagai cincin Makan / Gerak / Pulih.
 - **Jadwal 60 hari**: kalender per fase dengan status tiap hari (tercapai, sebagian, tidak tercapai), streak, dan rata-rata.
