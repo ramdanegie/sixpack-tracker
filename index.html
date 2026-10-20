@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sixpack 60 Hari</title>
+<meta name="description" content="Jadwal 60 hari menuju sixpack: menu warteg murah, program gym, checklist harian, dan catatan berat badan.">
+<meta name="theme-color" content="#E8EDF5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#03050A" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sixpack 60">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css">
+<style>:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }</style>
+</head>
+<body>
+<!-- app:start -->
+<div class="ambient" aria-hidden="true"></div>
+<header class="navbar" id="navbar">
+  <div class="navbar-inner">
+    <span class="nav-title" id="navTitle">Hari Ini</span>
+    <span class="sync" id="sync" data-s="local" role="status"><i></i><span>Tersimpan</span></span>
+  </div>
+</header>
+<main class="view" id="view"></main>
+<nav class="tabbar" id="tabbar" aria-label="Menu utama"></nav>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<!-- app:end -->
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
