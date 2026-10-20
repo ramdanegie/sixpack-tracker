@@ -43,6 +43,14 @@ manifest.webmanifest  supaya bisa dipasang di layar utama HP
 
 Aplikasi akan terbuka layar penuh seperti app biasa.
 
+**Deploy ke Vercel (gratis):**
+
+1. Buka [vercel.com/new](https://vercel.com/new), login dengan GitHub, lalu **Import** repo ini.
+2. Framework Preset: **Other**. Build Command dan Output Directory dikosongkan (root folder).
+3. Tekan **Deploy**. Setiap push ke branch produksi (default `main`) otomatis ter-deploy ulang; branch lain dapat link preview sendiri.
+
+Catatan: Vercel tidak bisa menyimpan file SQLite secara permanen. Kalau nanti butuh database, pakai SQLite versi cloud seperti Turso.
+
 **Jalankan lokal:**
 
 ```bash
