@@ -216,27 +216,33 @@ body::before {
 }
 .nav-title { font-size: 17px; font-weight: 600; opacity: 0; transition: opacity .2s; }
 .navbar.scrolled .nav-title { opacity: 1; }
+/* Status sinkron: titik hijau = tersinkron, merah = belum */
 .sync {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--fill);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--label-2);
-  white-space: nowrap;
+  appearance: none;
+  border: 0;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  margin-right: -12px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  cursor: pointer;
 }
-.sync { appearance: none; border: 0; font-family: inherit; cursor: pointer; }
-.sync i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
-.sync[data-s="server"] i { background: var(--blue); }
-.sync[data-s="locked"] i, .sync[data-s="offline"] i { background: var(--orange); }
-.sync[data-s="locked"] { color: var(--orange-ink); background: var(--orange-tint); }
-.sync[data-s="cloud"] i { background: var(--blue); }
-.sync[data-s="saving"] i { background: var(--orange); }
-.sync[data-s="memory"] i { background: var(--red); }
+.sync i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 3px var(--red-tint);
+  transition: background-color .3s, box-shadow .3s;
+}
+.sync[data-s="server"] i, .sync[data-s="cloud"] i, .sync[data-s="saving"] i {
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint);
+}
+.sync[data-s="saving"] i { animation: sync-pulse 1s ease-in-out infinite; }
+@keyframes sync-pulse { 50% { opacity: .35; } }
 
 /* ---------- Halaman ---------- */
 .view {
