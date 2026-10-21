@@ -216,7 +216,7 @@ body::before {
 }
 .nav-title { font-size: 17px; font-weight: 600; opacity: 0; transition: opacity .2s; }
 .navbar.scrolled .nav-title { opacity: 1; }
-/* Status sinkron: titik biru = tersinkron, merah = belum */
+/* Status sinkron: titik hijau = tersinkron, merah = belum */
 .sync {
   appearance: none;
   border: 0;
@@ -238,8 +238,8 @@ body::before {
   transition: background-color .3s, box-shadow .3s;
 }
 .sync[data-s="server"] i, .sync[data-s="cloud"] i, .sync[data-s="saving"] i {
-  background: var(--blue);
-  box-shadow: 0 0 0 3px var(--blue-tint);
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint);
 }
 .sync[data-s="saving"] i { animation: sync-pulse 1s ease-in-out infinite; }
 @keyframes sync-pulse { 50% { opacity: .35; } }
