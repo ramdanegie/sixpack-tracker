@@ -45,6 +45,13 @@ const FOODS = {
   gorengan:    { name: 'Gorengan tepung (bakwan, mendoan)', kcal: 140, p: 3, price: 1500, cat: 'Lain-lain', grade: 'hindari' },
   kerupuk:     { name: 'Kerupuk',                       kcal: 60,  p: 1,  price: 1000,  cat: 'Lain-lain', grade: 'hindari' },
   es_teh:      { name: 'Es teh manis',                  kcal: 120, p: 0,  price: 4000,  cat: 'Minuman',   grade: 'hindari', tip: 'Ganti es teh tawar / air putih.' },
+
+  // Kopi
+  kopi_hitam:  { name: 'Kopi hitam tanpa gula',         kcal: 5,   p: 0,  price: 3000,  cat: 'Minuman', grade: 'pilih', tip: 'Minum 30–60 menit sebelum gym. Hindari setelah jam 15.00 supaya tidur tidak terganggu.' },
+  kopi_uht:    { name: 'Kopi hitam + susu UHT low fat (100 ml)', kcal: 50, p: 3, price: 5000, cat: 'Minuman', grade: 'pilih', tip: 'Rasa kopi susu tanpa gula, plus sedikit protein.' },
+  kopi_sachet: { name: 'Kopi sachet 3-in-1',            kcal: 100, p: 1,  price: 2000,  cat: 'Minuman', grade: 'sesekali', tip: '±12 g gula per bungkus. Maksimal 1 sehari; hari itu jangan centang "bebas minuman manis".' },
+  kopi_susu_sachet: { name: 'Kopi susu / white coffee sachet', kcal: 130, p: 1, price: 2500, cat: 'Minuman', grade: 'sesekali', tip: '±17 g gula per bungkus. Pilih varian less sugar kalau ada.' },
+  es_kopi_aren: { name: 'Es kopi susu gula aren (kedai)', kcal: 250, p: 4, price: 18000, cat: 'Minuman', grade: 'hindari', tip: 'Satu gelas hampir setara 1 porsi nasi + lauk.' },
   mie_goreng:  { name: 'Mie / bihun goreng',            kcal: 250, p: 5,  price: 4000,  cat: 'Karbo',     grade: 'hindari' },
   ayam_tepung: { name: 'Ayam goreng tepung / kremes',   kcal: 330, p: 22, price: 13000, cat: 'Lauk hewani', grade: 'hindari' },
   perkedel:    { name: 'Perkedel kentang',              kcal: 120, p: 2,  price: 2500,  cat: 'Lain-lain', grade: 'hindari' },
@@ -120,6 +127,7 @@ const WARTEG_TIPS = [
   'Minum air putih atau es teh tawar. Satu es teh manis ≈ 3 sendok gula.',
   'Tolak kerupuk dan gorengan di meja. Satu bakwan ≈ 140 kkal.',
   'Rebus telur sendiri sekali banyak. Protein termurah, ±Rp2.000 per butir.',
+  'Ngopi pilih kopi hitam (±5 kkal). Kopi sachet 3-in-1 ±100 kkal dan ±12 g gula per bungkus.',
 ];
 
 const PHASES = [

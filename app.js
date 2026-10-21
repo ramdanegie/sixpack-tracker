@@ -289,7 +289,12 @@ const SYNC_TEXT = {
 function setSync(s) {
   syncState = s;
   const chip = $('#sync');
-  if (chip) { chip.dataset.s = s; chip.lastElementChild.textContent = SYNC_TEXT[s][0]; }
+  if (chip) {
+    const synced = s === 'server' || s === 'cloud' || s === 'saving';
+    chip.dataset.s = s;
+    chip.title = (synced ? 'Tersinkron' : 'Belum tersinkron') + ' · ' + SYNC_TEXT[s][1];
+    chip.setAttribute('aria-label', chip.title);
+  }
   const row = $('#syncText');
   if (row) row.textContent = SYNC_TEXT[s][1] + (cloud.note && (s === 'offline' || s === 'local') ? ` (${cloud.note})` : '');
 }
@@ -470,7 +475,7 @@ function checkText(id, plan, m, dm) {
       const sub = two ? `Termasuk ${eggs} telur rebus` : m ? 'Lauk hewani + tempe/tahu tiap makan' : 'Isi profil supaya target gram dihitung';
       return [m ? `Protein ≥ ${m.protein} g` : 'Protein cukup', sub];
     }
-    case 'bersih': return ['Bebas gorengan & minuman manis', 'Tanpa gorengan tepung, kerupuk, es teh manis'];
+    case 'bersih': return ['Bebas gorengan & minuman manis', 'Tanpa gorengan tepung, kerupuk, es teh manis, kopi sachet'];
     case 'latihan': return plan.rest
       ? ['Jalan santai + stretching', CARDIO.walk[pi]]
       : session.optional
@@ -942,7 +947,7 @@ function viewWarteg() {
       </div>
       <div class="col">
         <section class="section">
-          <div class="section-head"><h2 class="section-title">Daftar lauk</h2></div>
+          <div class="section-head"><h2 class="section-title">Makanan & minuman</h2></div>
           <div class="segmented" role="group" aria-label="Kategori makanan">${grades.map(([id, label]) => `<button type="button" data-grade="${id}" aria-pressed="${ui.foodGrade === id}">${label}</button>`).join('')}</div>
           <div class="list glass">${list}</div>
         </section>
